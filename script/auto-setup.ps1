@@ -74,6 +74,34 @@ function Get-ConfigVersion {
     return $selection
 }
 
+function Load-ScriptConfiguration {
+    param(
+        [Parameter(Mandatory)]
+        [string]$ScriptRoot
+    )
+
+    $configPath = Join-Path $ScriptRoot 'configuration.ini'
+    if (-not (Test-Path -Path $configPath -PathType Leaf)) {
+        return @{}
+    }
+
+    $config = @{}
+    Get-Content -Path $configPath | ForEach-Object {
+        $line = $_.Trim()
+        if (-not $line -or $line.StartsWith('#') -or $line.StartsWith(';')) {
+            return
+        }
+
+        if ($line -match '^(?<key>[^=\s]+)\s*=\s*(?<value>.+)$') {
+            $key = $matches['key'].Trim()
+            $value = $matches['value'].Trim()
+            $config[$key] = $value
+        }
+    }
+
+    return $config
+}
+
 function Copy-DirectStorageDlls {
     param(
         [Parameter(Mandatory)]
@@ -166,14 +194,39 @@ function Copy-ConfigFiles {
 ## Main
 Write-Host "=== Darktide DirectStorage Installer ===" -ForegroundColor Cyan
 
-$steamRoot = Read-Host 'Enter your Steam folder (e.g. C:\Program Files (x86)\Steam)'
+# Detect script location (supports running from repo root or script folder)
+$scriptRoot = $PSScriptRoot
+if (-not $scriptRoot) {
+    $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
+}
+
+$configValues = Load-ScriptConfiguration -ScriptRoot $scriptRoot
+
+$steamRoot = $configValues.SteamRoot
+if (-not $steamRoot) {
+    $steamRoot = Read-Host 'Enter your Steam folder (e.g. C:\Program Files (x86)\Steam)'
+} else {
+    Write-Host "Using Steam folder from configuration: $steamRoot" -ForegroundColor Cyan
+}
+
 if (-not (Test-SteamRoot -Path $steamRoot)) {
     Write-Host "Invalid Steam folder. Ensure it is a valid path ending in '\\Steam' (e.g. C:\Program Files (x86)\Steam)." -ForegroundColor Red
     exit 1
 }
 
-$arch = Get-ArchitectureSelection
-$configVersion = Get-ConfigVersion
+$arch = $configValues.Architecture
+if (-not $arch) {
+    $arch = Get-ArchitectureSelection
+} else {
+    Write-Host "Using architecture from configuration: $arch" -ForegroundColor Cyan
+}
+
+$configVersion = $configValues.ConfigVersion
+if (-not $configVersion) {
+    $configVersion = Get-ConfigVersion
+} else {
+    Write-Host "Using config version from configuration: $configVersion" -ForegroundColor Cyan
+}
 
 Copy-DirectStorageDlls -SteamRoot $steamRoot -Arch $arch
 Copy-ConfigFiles -SteamRoot $steamRoot -ConfigVersion $configVersion
