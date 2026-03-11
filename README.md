@@ -1,4 +1,4 @@
-# _Warhammer 40,000: Darktide_ performance configs and binaries.
+# w40kd
 This repository contains **performance configurations** and **better drop-in binaries** to **increase performance** of the game _Warhammer 40,000: Darktide_. 
 
 A **script can be used to directly install** all of this automatically in one go (see installation instructions directly below).
