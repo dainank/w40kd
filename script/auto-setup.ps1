@@ -80,8 +80,13 @@ function Load-ScriptConfiguration {
         [string]$ScriptRoot
     )
 
-    $configPath = Join-Path $ScriptRoot 'configuration.ini'
-    if (-not (Test-Path -Path $configPath -PathType Leaf)) {
+    # Look for configuration.ini in the script folder and in the repo root (parent of script folder).
+    $candidatePaths = @()
+    $candidatePaths += Join-Path -Path $ScriptRoot -ChildPath 'configuration.ini'
+    $candidatePaths += Join-Path -Path (Split-Path -Parent $ScriptRoot) -ChildPath 'configuration.ini'
+
+    $configPath = $candidatePaths | Where-Object { Test-Path -Path $_ -PathType Leaf } | Select-Object -First 1
+    if (-not $configPath) {
         return @{}
     }
 
@@ -130,6 +135,7 @@ function Copy-DirectStorageDlls {
     try {
         $nupkgPath = Join-Path $tempRoot ('$packageName.' + $version + '.nupkg')
         Write-Host "Downloading DirectStorage package from NuGet..." -ForegroundColor Cyan
+        Write-Host ""  # spacer
         Invoke-WebRequest -Uri $nugetUrl -OutFile $nupkgPath -UseBasicParsing -ErrorAction Stop
 
         Expand-Archive -Path $nupkgPath -DestinationPath $tempExtract -Force
@@ -182,17 +188,32 @@ function Copy-ConfigFiles {
         New-Item -ItemType Directory -Path $targetConfigDir -Force | Out-Null
     }
 
+    $repoRoot = Split-Path -Parent $scriptRoot
+    $repoName = Split-Path -Leaf $repoRoot
+
     Get-ChildItem -Path $sourceConfigDir -Filter '*.ini' -File | ForEach-Object {
         $dest = Join-Path $targetConfigDir $_.Name
         Copy-Item -Path $_.FullName -Destination $dest -Force
-        Write-Host "Copied $_.Name -> $dest" -ForegroundColor Green
+
+        # Show shorter paths for readability
+        $sourceShort = $_.FullName -replace "^" + [regex]::Escape("$repoRoot\\"), "${repoName}\\"
+
+        $destShort = $dest
+        $marker = 'Warhammer 40,000 DARKTIDE'
+        $markerIndex = $dest.IndexOf($marker, [System.StringComparison]::OrdinalIgnoreCase)
+        if ($markerIndex -ge 0) {
+            $destShort = $dest.Substring($markerIndex)
+        }
+
+        Write-Host "Copied $sourceShort -> $destShort" -ForegroundColor Green
     }
 
     Write-Host "Config files copied successfully." -ForegroundColor Green
 }
 
 ## Main
-Write-Host "=== Darktide DirectStorage Installer ===" -ForegroundColor Cyan
+Write-Host "=== Darktide DirectStorage Installer ===" -ForegroundColor DarkRed
+Write-Host ""  # spacer
 
 # Detect script location (supports running from repo root or script folder)
 $scriptRoot = $PSScriptRoot
@@ -206,7 +227,7 @@ $steamRoot = $configValues.SteamRoot
 if (-not $steamRoot) {
     $steamRoot = Read-Host 'Enter your Steam folder (e.g. C:\Program Files (x86)\Steam)'
 } else {
-    Write-Host "Using Steam folder from configuration: $steamRoot" -ForegroundColor Cyan
+    Write-Host "Using Steam folder from configuration: $steamRoot" -ForegroundColor Magenta
 }
 
 if (-not (Test-SteamRoot -Path $steamRoot)) {
@@ -218,17 +239,21 @@ $arch = $configValues.Architecture
 if (-not $arch) {
     $arch = Get-ArchitectureSelection
 } else {
-    Write-Host "Using architecture from configuration: $arch" -ForegroundColor Cyan
+    Write-Host "Using architecture from configuration: $arch" -ForegroundColor Magenta
 }
 
 $configVersion = $configValues.ConfigVersion
 if (-not $configVersion) {
     $configVersion = Get-ConfigVersion
 } else {
-    Write-Host "Using config version from configuration: $configVersion" -ForegroundColor Cyan
+    Write-Host "Using config version from configuration: $configVersion" -ForegroundColor Magenta
+    Write-Host ""  # spacer
 }
 
 Copy-DirectStorageDlls -SteamRoot $steamRoot -Arch $arch
+Write-Host ""  # spacer between DLL and config steps
 Copy-ConfigFiles -SteamRoot $steamRoot -ConfigVersion $configVersion
 
-Write-Host "\nAll done!" -ForegroundColor Cyan
+Write-Host ""  # newline separator
+Write-Host "All done! Enjoy the extra FPS." -ForegroundColor Cyan
+Write-Host ""  # final newline
