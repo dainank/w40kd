@@ -12,4 +12,12 @@ Warhammer 40,000: Darktide performance configs and binaries.
 > 2. Navigate to the **Installed Files** section.
 > 3. Click the **Browse...** button.
 > 
-> This will open your File Explorer at the `*\Steam\steamapps\common\Warhammer 40,000 DARKTIDE` location, thus you can find the correct locations from there.
+> This will open your File Explorer at the `*\Steam\steamapps\common\Warhammer 40,000 DARKTIDE` location, thus you can find the correct directories from there.
+
+----
+
+>[!IMPORTANT]
+> To **install** follow these instructions:
+> 1. `git clone https://github.com/dainank/w40kd.git`
+> 2. `cd w40kd`
+> 3. `./script/auto-setup.ps1`
