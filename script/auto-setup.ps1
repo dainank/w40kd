@@ -74,6 +74,17 @@ function Get-ConfigVersion {
     return $selection
 }
 
+function Get-RamVariant {
+    $ramOptions = @('16gb', '32gb', '64gb')
+    $selection = Read-Host "Select RAM variant (16gb/32gb/64gb) [32gb]"
+    if ([string]::IsNullOrWhiteSpace($selection)) { $selection = '32gb' }
+    if (-not ($ramOptions -contains $selection)) {
+        Write-Warning "Unknown RAM variant '$selection'. Defaulting to 32gb."
+        $selection = '32gb'
+    }
+    return $selection
+}
+
 function Load-ScriptConfiguration {
     param(
         [Parameter(Mandatory)]
@@ -170,7 +181,9 @@ function Copy-ConfigFiles {
         [Parameter(Mandatory)]
         [string]$SteamRoot,
         [Parameter(Mandatory)]
-        [string]$ConfigVersion
+        [string]$ConfigVersion,
+        [Parameter(Mandatory)]
+        [string]$RamVariant
     )
 
     # Prefer $PSScriptRoot (works reliably when the script is invoked directly).
@@ -180,7 +193,7 @@ function Copy-ConfigFiles {
         $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
     }
 
-    $sourceConfigDir = Resolve-Path -Path (Join-Path $scriptRoot "..\config\$ConfigVersion") -ErrorAction Stop
+    $sourceConfigDir = Resolve-Path -Path (Join-Path $scriptRoot "..\config\$ConfigVersion\$RamVariant") -ErrorAction Stop
 
     $targetConfigDir = Join-Path $SteamRoot 'steamapps\common\Warhammer 40,000 DARKTIDE\bundle\application_settings'
     if (-not (Test-Path -Path $targetConfigDir)) {
@@ -250,9 +263,16 @@ if (-not $configVersion) {
     Write-Host ""  # spacer
 }
 
+$ramVariant = $configValues.RamVariant
+if (-not $ramVariant) {
+    $ramVariant = Get-RamVariant
+} else {
+    Write-Host "Using RAM variant from configuration: $ramVariant" -ForegroundColor Magenta
+}
+
 Copy-DirectStorageDlls -SteamRoot $steamRoot -Arch $arch
 Write-Host ""  # spacer between DLL and config steps
-Copy-ConfigFiles -SteamRoot $steamRoot -ConfigVersion $configVersion
+Copy-ConfigFiles -SteamRoot $steamRoot -ConfigVersion $configVersion -RamVariant $ramVariant
 
 Write-Host ""  # newline separator
 Write-Host "All done! Enjoy the extra FPS." -ForegroundColor Cyan
