@@ -3,13 +3,19 @@ This repository contains **performance configurations** and **better drop-in bin
 
 A **script can be used to directly install** all of this automatically in one go (see installation instructions directly below).
 
+This makes 'restoring' your performance configs trivial whenever **Darktide** has an automatic update.
+
 ----
 
 >[!IMPORTANT]
+> **Prerequisites** (make sure you have `git` on your system if you are not downloading zip):
+> 1. `winget install Git.Git`
+> 
 > To **install** follow these instructions:
-> 1. `git clone https://github.com/dainank/w40kd.git`
+> 1. `git clone https://github.com/dainank/w40kd.git` _OR_ [download zip directly here](https://github.com/dainank/w40kd/archive/refs/heads/main.zip)
 > 2. `cd w40kd`
-> 3. `./script/auto-setup.ps1` 
+> 3. Edit the `configuration.ini` file to match your system.
+> 4. Run the **PowerShell** script via _CMDL_ `./script/auto-setup.ps1` or by just double-clicking it.
 
 _Example Usage_:
 <img width="1089" height="329" alt="Example Usage" src="https://github.com/user-attachments/assets/53afed9a-ec8f-47df-9f4d-62025a677218" />
@@ -33,3 +39,11 @@ The script handles everything automatically
     - If you do not trust the `*.dll`'s here, you can download them directly from __Microsoft__ [here](https://devblogs.microsoft.com/directx/directstorage-api-downloads/). Our script fetches them from there too (see `script/auto-setup.ps1` and the `Get-LatestDirectStorageVersion` function).
 
 - The two `*.ini` **config** files should be placed under `*\Steam\steamapps\common\Warhammer 40,000 DARKTIDE\bundle\application_settings`
+
+----
+
+## FAQ
+
+**Q**: The game crashes on launch.
+
+**A**: Most likely your system has a hardware component that is not compatible with the latest `*.dll` binaries. Toggle the `ReplaceBinaries=false` flag to `false` and rerun the script!
