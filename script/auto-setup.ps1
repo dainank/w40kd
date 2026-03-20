@@ -75,8 +75,8 @@ function Get-ConfigVersion {
 }
 
 function Get-RamVariant {
-    $ramOptions = @('16gb', '32gb', '64gb')
-    $selection = Read-Host "Select RAM variant (16gb/32gb/64gb) [32gb]"
+    $ramOptions = @('8gb', '16gb', '32gb', '64gb')
+    $selection = Read-Host "Select RAM variant (8gb/16gb/32gb/64gb) [32gb]"
     if ([string]::IsNullOrWhiteSpace($selection)) { $selection = '32gb' }
     if (-not ($ramOptions -contains $selection)) {
         Write-Warning "Unknown RAM variant '$selection'. Defaulting to 32gb."
