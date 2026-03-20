@@ -1,13 +1,13 @@
 <#
 .SYNOPSIS
-    Installs the latest DirectStorage SDK DLLs and copies the selected config files into a Darktide install.
+    Installs the latest DirectStorage SDK DLLs and updates selected config fields in a Darktide install.
 
 .DESCRIPTION
     - Prompts for the Steam folder location (must point to a Steam folder like "C:\Program Files (x86)\Steam").
     - Prompts for CPU architecture (x64/x86/ARM64), defaults to x64.
     - Fetches the latest Microsoft.Direct3D.DirectStorage NuGet package and extracts the appropriate DLLs.
     - Copies dstorage.dll and dstoragecore.dll into the Darktide binaries folder.
-    - Prompts for a config version (currently only "v4" is available) and copies the matching INI files.
+    - Prompts for a config version (currently only "v4" is available) and applies matching field overrides to existing INI files.
 #>
 
 [CmdletBinding()]
@@ -118,6 +118,161 @@ function Load-ScriptConfiguration {
     return $config
 }
 
+function Get-RootSettingValue {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Content,
+        [Parameter(Mandatory)]
+        [string]$Key
+    )
+
+    $pattern = "(?im)^(?!\s*[#;])\s*" + [regex]::Escape($Key) + "\s*=\s*(?<value>[^\r\n]+)"
+    $match = [regex]::Match($Content, $pattern)
+    if (-not $match.Success) {
+        throw "Expected root key '$Key' was not found."
+    }
+
+    return $match.Groups['value'].Value.Trim()
+}
+
+function Get-BlockSettingValue {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Content,
+        [Parameter(Mandatory)]
+        [string]$BlockName,
+        [Parameter(Mandatory)]
+        [string]$Key
+    )
+
+    $pattern = "(?ms)" + [regex]::Escape($BlockName) + "\s*=\s*\{.*?^\s*" + [regex]::Escape($Key) + "\s*=\s*(?<value>[^\r\n]+)"
+    $match = [regex]::Match($Content, $pattern)
+    if (-not $match.Success) {
+        throw "Expected key '$Key' in block '$BlockName' was not found."
+    }
+
+    return $match.Groups['value'].Value.Trim()
+}
+
+function Set-RootSettingValue {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Content,
+        [Parameter(Mandatory)]
+        [string]$Key,
+        [Parameter(Mandatory)]
+        [string]$NewValue
+    )
+
+    $pattern = "(?im)^(?!\s*[#;])(?<prefix>\s*" + [regex]::Escape($Key) + "\s*=\s*)(?<value>[^\r\n]+)"
+    $match = [regex]::Match($Content, $pattern)
+    if (-not $match.Success) {
+        throw "Expected root key '$Key' was not found in target file."
+    }
+
+    $valueStart = $match.Groups['value'].Index
+    $valueLength = $match.Groups['value'].Length
+
+    return $Content.Substring(0, $valueStart) + $NewValue + $Content.Substring($valueStart + $valueLength)
+}
+
+function Set-BlockSettingValue {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Content,
+        [Parameter(Mandatory)]
+        [string]$BlockName,
+        [Parameter(Mandatory)]
+        [string]$Key,
+        [Parameter(Mandatory)]
+        [string]$NewValue
+    )
+
+    $pattern = "(?ms)(?<prefix>" + [regex]::Escape($BlockName) + "\s*=\s*\{.*?^\s*" + [regex]::Escape($Key) + "\s*=\s*)(?<value>[^\r\n]+)"
+    $match = [regex]::Match($Content, $pattern)
+    if (-not $match.Success) {
+        throw "Expected key '$Key' in block '$BlockName' was not found in target file."
+    }
+
+    $valueStart = $match.Groups['value'].Index
+    $valueLength = $match.Groups['value'].Length
+
+    return $Content.Substring(0, $valueStart) + $NewValue + $Content.Substring($valueStart + $valueLength)
+}
+
+function Write-TextFileUtf8NoBom {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path,
+        [Parameter(Mandatory)]
+        [string]$Content
+    )
+
+    $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+    [System.IO.File]::WriteAllText($Path, $Content, $utf8NoBom)
+}
+
+function Apply-SettingsCommonOverrides {
+    param(
+        [Parameter(Mandatory)]
+        [string]$SourceFile,
+        [Parameter(Mandatory)]
+        [string]$TargetFile
+    )
+
+    $sourceContent = Get-Content -Path $SourceFile -Raw
+    $targetContent = Get-Content -Path $TargetFile -Raw
+
+    $blockUpdates = @(
+        @{ Block = 'feedback_streamer_settings'; Key = 'max_age_out_tiles_per_frame' }
+        @{ Block = 'feedback_streamer_settings'; Key = 'max_streaming_tiles_per_frame' }
+        @{ Block = 'feedback_streamer_settings'; Key = 'tile_staging_buffer_size' }
+        @{ Block = 'mesh_streamer_settings'; Key = 'limit' }
+        @{ Block = 'texture_streamer_settings'; Key = 'streaming_texture_pool_size' }
+    )
+
+    foreach ($update in $blockUpdates) {
+        $value = Get-BlockSettingValue -Content $sourceContent -BlockName $update.Block -Key $update.Key
+        $targetContent = Set-BlockSettingValue -Content $targetContent -BlockName $update.Block -Key $update.Key -NewValue $value
+    }
+
+    $rootUpdates = @(
+        'streaming_max_open_streams'
+        'streaming_texture_pool_size'
+    )
+
+    foreach ($key in $rootUpdates) {
+        $value = Get-RootSettingValue -Content $sourceContent -Key $key
+        $targetContent = Set-RootSettingValue -Content $targetContent -Key $key -NewValue $value
+    }
+
+    Write-TextFileUtf8NoBom -Path $TargetFile -Content $targetContent
+}
+
+function Apply-Win32Overrides {
+    param(
+        [Parameter(Mandatory)]
+        [string]$SourceFile,
+        [Parameter(Mandatory)]
+        [string]$TargetFile
+    )
+
+    $sourceContent = Get-Content -Path $SourceFile -Raw
+    $targetContent = Get-Content -Path $TargetFile -Raw
+
+    $updates = @(
+        @{ Block = 'renderer'; Key = 'fullscreen' }
+        @{ Block = 'win32'; Key = 'streaming_texture_pool_size' }
+    )
+
+    foreach ($update in $updates) {
+        $value = Get-BlockSettingValue -Content $sourceContent -BlockName $update.Block -Key $update.Key
+        $targetContent = Set-BlockSettingValue -Content $targetContent -BlockName $update.Block -Key $update.Key -NewValue $value
+    }
+
+    Write-TextFileUtf8NoBom -Path $TargetFile -Content $targetContent
+}
+
 function Copy-DirectStorageDlls {
     param(
         [Parameter(Mandatory)]
@@ -204,24 +359,45 @@ function Copy-ConfigFiles {
     $repoRoot = Split-Path -Parent $scriptRoot
     $repoName = Split-Path -Leaf $repoRoot
 
-    Get-ChildItem -Path $sourceConfigDir -Filter '*.ini' -File | ForEach-Object {
-        $dest = Join-Path $targetConfigDir $_.Name
-        Copy-Item -Path $_.FullName -Destination $dest -Force
+    $fileOperations = @(
+        @{
+            Name = 'settings_common.ini'
+            Updater = 'Apply-SettingsCommonOverrides'
+        }
+        @{
+            Name = 'win32_settings.ini'
+            Updater = 'Apply-Win32Overrides'
+        }
+    )
 
-        # Show shorter paths for readability
-        $sourceShort = $_.FullName -replace "^" + [regex]::Escape("$repoRoot\\"), "${repoName}\\"
+    foreach ($operation in $fileOperations) {
+        $sourceFile = Join-Path $sourceConfigDir $operation.Name
+        $targetFile = Join-Path $targetConfigDir $operation.Name
 
-        $destShort = $dest
-        $marker = 'Warhammer 40,000 DARKTIDE'
-        $markerIndex = $dest.IndexOf($marker, [System.StringComparison]::OrdinalIgnoreCase)
-        if ($markerIndex -ge 0) {
-            $destShort = $dest.Substring($markerIndex)
+        if (-not (Test-Path -Path $sourceFile -PathType Leaf)) {
+            throw "Expected source config file not found: $sourceFile"
         }
 
-        Write-Host "Copied $sourceShort -> $destShort" -ForegroundColor Green
+        $sourceShort = $sourceFile -replace "^" + [regex]::Escape("$repoRoot\\"), "${repoName}\\"
+        $destShort = $targetFile
+        $marker = 'Warhammer 40,000 DARKTIDE'
+        $markerIndex = $targetFile.IndexOf($marker, [System.StringComparison]::OrdinalIgnoreCase)
+        if ($markerIndex -ge 0) {
+            $destShort = $targetFile.Substring($markerIndex)
+        }
+
+        if (-not (Test-Path -Path $targetFile -PathType Leaf)) {
+            # First-time setup fallback: copy full file when the target file does not exist yet.
+            Copy-Item -Path $sourceFile -Destination $targetFile -Force
+            Write-Host "Copied $sourceShort -> $destShort (target missing)" -ForegroundColor Yellow
+            continue
+        }
+
+        & $operation.Updater -SourceFile $sourceFile -TargetFile $targetFile
+        Write-Host "Updated relevant fields from $sourceShort -> $destShort" -ForegroundColor Green
     }
 
-    Write-Host "Config files copied successfully." -ForegroundColor Green
+    Write-Host "Config files updated successfully (non-targeted values preserved)." -ForegroundColor Green
 }
 
 ## Main
