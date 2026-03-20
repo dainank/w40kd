@@ -260,7 +260,6 @@ if (-not $configVersion) {
     $configVersion = Get-ConfigVersion
 } else {
     Write-Host "Using config version from configuration: $configVersion" -ForegroundColor Magenta
-    Write-Host ""  # spacer
 }
 
 $ramVariant = $configValues.RamVariant
@@ -268,6 +267,7 @@ if (-not $ramVariant) {
     $ramVariant = Get-RamVariant
 } else {
     Write-Host "Using RAM variant from configuration: $ramVariant" -ForegroundColor Magenta
+    Write-Host ""  # spacer
 }
 
 Copy-DirectStorageDlls -SteamRoot $steamRoot -Arch $arch
