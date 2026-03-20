@@ -12,8 +12,8 @@ This makes 'restoring' your performance configs trivial whenever **Darktide** ha
 > 1. `winget install Git.Git`
 > 
 > To **install** follow these instructions:
-> 1. `git clone https://github.com/dainank/w40kd.git` _OR_ [download zip directly here](https://github.com/dainank/w40kd/archive/refs/heads/main.zip)
-> 2. `cd w40kd`
+> 1. `git clone https://github.com/dainank/w40kd.git` _OR_ [download zip directly here](https://github.com/dainank/w40kd/archive/refs/heads/main.zip).
+> 2. Go to the location of the donwloaded files `cd w40kd`.
 > 3. Edit the `configuration.ini` file to match your system.
 > 4. Run the **PowerShell** script via _CMDL_ `./script/auto-setup.ps1` or by just double-clicking it.
 
@@ -47,3 +47,9 @@ The script handles everything automatically
 **Q**: The game crashes on launch.
 
 **A**: Most likely your system has a hardware component that is not compatible with the latest `*.dll` binaries. Toggle the `ReplaceBinaries=false` flag to `false` and rerun the script!
+
+--
+
+**Q**: How do I update and get the latest script?
+
+**A**: If you are using `git`, simply `git update-index --skip-worktree configuration.ini` and then `git pull` in the project. Else, you will need to [redownload the zip file](https://github.com/dainank/w40kd/archive/refs/heads/main.zip) and configure the config again in step 3.
