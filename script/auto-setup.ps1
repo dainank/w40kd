@@ -1,12 +1,12 @@
 <#
 .SYNOPSIS
-    Installs the latest DirectStorage SDK DLLs and updates selected config fields in a Darktide install.
+    Installs optional DirectStorage SDK DLL updates and applies selected config field overrides in a Darktide install.
 
 .DESCRIPTION
     - Prompts for the Steam folder location (must point to a Steam folder like "C:\Program Files (x86)\Steam").
     - Prompts for CPU architecture (x64/x86/ARM64), defaults to x64.
-    - Fetches the latest Microsoft.Direct3D.DirectStorage NuGet package and extracts the appropriate DLLs.
-    - Copies dstorage.dll and dstoragecore.dll into the Darktide binaries folder.
+    - Optionally fetches the latest Microsoft.Direct3D.DirectStorage NuGet package and extracts the appropriate DLLs.
+    - Optionally copies dstorage.dll and dstoragecore.dll into the Darktide binaries folder.
     - Prompts for a config version (currently only "v4" is available) and applies matching field overrides to existing INI files.
 #>
 
@@ -116,6 +116,41 @@ function Load-ScriptConfiguration {
     }
 
     return $config
+}
+
+function Get-BooleanConfigValue {
+    param(
+        [Parameter(Mandatory)]
+        [hashtable]$ConfigValues,
+        [Parameter(Mandatory)]
+        [string]$Key,
+        [Parameter(Mandatory)]
+        [bool]$Default
+    )
+
+    if (-not $ConfigValues.ContainsKey($Key)) {
+        return $Default
+    }
+
+    $rawValue = $ConfigValues[$Key]
+    if ([string]::IsNullOrWhiteSpace($rawValue)) {
+        return $Default
+    }
+
+    $normalized = $rawValue.Trim().Trim('"').Trim("'").ToLowerInvariant()
+
+    switch -Regex ($normalized) {
+        '^(true|1|yes|y|on)$' {
+            return $true
+        }
+        '^(false|0|no|n|off)$' {
+            return $false
+        }
+        default {
+            Write-Warning "Invalid boolean value '$rawValue' for '$Key'. Defaulting to '$Default'."
+            return $Default
+        }
+    }
 }
 
 function Get-RootSettingValue {
@@ -443,10 +478,21 @@ if (-not $ramVariant) {
     $ramVariant = Get-RamVariant
 } else {
     Write-Host "Using RAM variant from configuration: $ramVariant" -ForegroundColor Magenta
-    Write-Host ""  # spacer
 }
 
-Copy-DirectStorageDlls -SteamRoot $steamRoot -Arch $arch
+$replaceBinaries = Get-BooleanConfigValue -ConfigValues $configValues -Key 'ReplaceBinaries' -Default $true
+if ($configValues.ContainsKey('ReplaceBinaries')) {
+    Write-Host "Using binary replacement flag from configuration: $replaceBinaries" -ForegroundColor Magenta
+} else {
+    Write-Host "Binary replacement flag not set in configuration. Defaulting to: $replaceBinaries" -ForegroundColor DarkGray
+}
+Write-Host ""  # spacer
+
+if ($replaceBinaries) {
+    Copy-DirectStorageDlls -SteamRoot $steamRoot -Arch $arch
+} else {
+    Write-Host "Skipping DirectStorage DLL replacement (ReplaceBinaries=false)." -ForegroundColor Yellow
+}
 Write-Host ""  # spacer between DLL and config steps
 Copy-ConfigFiles -SteamRoot $steamRoot -ConfigVersion $configVersion -RamVariant $ramVariant
 
