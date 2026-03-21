@@ -34,7 +34,7 @@ _Example Usage_:
 
 ## Addional Information
 
-The script handles everything automatically
+The script handles everything automatically but if you want to do it manually:
 - The two `*.dll` **binary** files should be placed under `*\Steam\steamapps\common\Warhammer 40,000 DARKTIDE\binaries`
     - If you do not trust the `*.dll`'s here, you can download them directly from __Microsoft__ [here](https://devblogs.microsoft.com/directx/directstorage-api-downloads/). Our script fetches them from there too (see `script/auto-setup.ps1` and the `Get-LatestDirectStorageVersion` function).
 
@@ -53,3 +53,9 @@ The script handles everything automatically
 **Q**: How do I update and get the latest script?
 
 **A**: If you are using `git`, simply `git update-index --skip-worktree configuration.ini` and then `git pull` in the project. Else, you will need to [redownload the zip file](https://github.com/dainank/w40kd/archive/refs/heads/main.zip) and configure the config again in step 3.
+
+--
+
+**Q**: How many **workerthreads** should I configure in the launcher settings?
+
+**A**: My recommendation is to configure the workerthreads one level below the total number of real cores that you possess. You can find this number by going to **Task Manager**, selecting the **Performance** tab and then selecting the **CPU**  tab.
