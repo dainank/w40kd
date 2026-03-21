@@ -59,4 +59,5 @@ The script handles everything automatically but if you want to do it manually:
 
 **Q**: How many **workerthreads** should I configure in the launcher settings?
 
-**A**: My recommendation is to configure the workerthreads one level below the total number of real cores that you possess. You can find this number by going to **Task Manager**, selecting the **Performance** tab and then selecting the **CPU**  tab.
+**A**: My recommendation is to configure the workerthreads one level below the total number of real cores that you possess. You can find this number by going to **Task Manager**, selecting the **Performance** tab and then selecting the **CPU**  tab. Then look for the number next to **Cores**.
+<img width="404" height="161" alt="example" src="https://github.com/user-attachments/assets/a23ff23e-62a8-46d2-ba71-328d8d18fb69" />
