@@ -13,12 +13,13 @@ This makes 'restoring' your performance configs trivial whenever **Darktide** ha
 > 
 > To **install** follow these instructions:
 > 1. `git clone https://github.com/dainank/w40kd.git` _OR_ [download zip directly here](https://github.com/dainank/w40kd/archive/refs/heads/main.zip).
-> 2. Go to the location of the donwloaded files `cd w40kd`.
+> 2. Go to the location of the downloaded files `cd w40kd`.
 > 3. Edit the `configuration.ini` file to match your system.
 > 4. Run the **PowerShell** script via _CMDL_ `./script/auto-setup.ps1` or by just double-clicking it.
 
 _Example Usage_:
-<img width="1089" height="329" alt="Example Usage" src="https://github.com/user-attachments/assets/53afed9a-ec8f-47df-9f4d-62025a677218" />
+
+<img width="1271" height="569" alt="Example" src="https://github.com/user-attachments/assets/bbb33188-9986-4421-b4fd-c7c8ddb1e228" />
 
 ----
 
